@@ -1,0 +1,33 @@
+default_stages:
+  - commit
+  - push
+default_language_version:
+  python: python3
+minimum_pre_commit_version: "1.20.0"
+repos:
+  # Auto formatting pre-commit hook
+  - repo: https://github.com/ambv/black
+    rev: 21.8b0
+    hooks:
+      - id: black
+        name: Run black python formatter.
+        language_version: python3.8
+        files: \.py$
+  # Sort library import order.
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.9.3
+    hooks:
+      - id: isort
+        name: Run isort to sort imports in python file.
+        files: \.py$
+        args:
+          - --line-length=88
+  # Flake8 format checker.
+  - repo: https://github.com/pyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+        name: Run flake8 format checker.
+        files: \.py$
+        args:
+          - --ignore=E501
