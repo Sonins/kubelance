@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: labelstudio-pvc
+  namespace: labelstudio
+spec:
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard-rwo
+  accessModes:
+    - ReadWriteOnce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: labelstudio
+  namespace: labelstudio
+spec:
+  selector:
+    matchLabels:
+      app: labelstudio
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: labelstudio
+    spec:
+      containers:
+      - name: labelstudio
+        image: heartexlabs/label-studio:latest
+        resources:
+          limits:
+            memory: "500Mi"
+            cpu: "250m"
+        volumeMounts:
+          - mountPath: /label-studio/data
+            name: data-vol
+        ports:
+        - containerPort: 8080
+          hostPort: 8080
+      volumes:
+        - name: data-vol
+          persistentVolumeClaim:
+            claimName: labelstudio-pvc       
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: labelstudio-svc
+  namespace: labelstudio
+spec:
+  selector:
+    app: labelstudio
+  ports:
+  - port: 8080
+    targetPort: 8080
