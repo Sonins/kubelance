@@ -1,7 +1,9 @@
-import json
-from airflow.providers.http.operators.http import SimpleHttpOperator
-from airflow import DAG
 from datetime import datetime
+
+from airflow.decorators import task
+from airflow.providers.http.operators.http import SimpleHttpOperator
+
+from airflow import DAG
 
 args = {
     "owner": "admin",
@@ -9,14 +11,20 @@ args = {
     "email_on_failure": True,
 }
 
+
+@task()
+def parse_storages(storages):
+    import json
+
+    return json.loads(storages)
+
+
 dag = DAG(
     dag_id="sync_storage",
     default_args=args,
     schedule_interval="0 0 * * *",
-    start_date=datetime.now().replace(
-        hour=0, minute=0, second=0, microsecond=0
-    ),
-    tags=["labelstudio", "mlops"]
+    start_date=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+    tags=["labelstudio", "mlops"],
 )
 
 getExportStorages = SimpleHttpOperator(
@@ -28,19 +36,20 @@ getExportStorages = SimpleHttpOperator(
     dag=dag,
 )
 
-for num, stor in enumerate(getExportStorages.output):
+parsed_result = parse_storages(storages=getExportStorages.output)
+
+for num, stor in enumerate(parsed_result):
     syncExportStorage = SimpleHttpOperator(
         task_id=f"sync_export_storage_{num}",
         endpoint=f"/api/storages/export/s3/{stor['id']}/sync",
         method="POST",
         data={
-            "project": stor['project'],
-            "bucket": stor['bucket'],
-            "aws_access_key_id": stor['aws_access_key_id'],
-            "aws_secret_access_key": stor['aws_secret_access_key'],
+            "project": stor["project"],
+            "bucket": stor["bucket"],
+            "aws_access_key_id": stor["aws_access_key_id"],
+            "aws_secret_access_key": stor["aws_secret_access_key"],
         },
         http_conn_id="labelstudio_conn",
         dag=dag,
     )
     getExportStorages >> syncExportStorage
-    
