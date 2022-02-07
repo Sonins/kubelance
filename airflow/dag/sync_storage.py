@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from airflow.decorators import task
+from airflow.providers.http.hooks.http import HttpHook
 from airflow.providers.http.operators.http import SimpleHttpOperator
 
 from airflow import DAG
@@ -13,10 +14,60 @@ args = {
 
 
 @task()
-def parse_storages(storages):
+def get_storages(
+    projects,
+    http_conn_id: str,
+):
     import json
 
-    return json.loads(storages)
+    from requests.auth import HTTPBasicAuth
+
+    projects = json.loads(projects)
+    http = HttpHook("GET", http_conn_id=http_conn_id, auth_type=HTTPBasicAuth)
+
+    storages = []
+
+    for project in projects["results"]:
+
+        # get import storages
+        response = http.run(
+            endpoint="/api/storages/s3", data={"project": project["id"]}
+        )
+
+        if response.ok:
+            storages.extend(
+                [dict(item, direction="import") for item in response.json()]
+            )  # add {'direction': 'import'} for each storage json.
+
+        # get export storages
+        response = http.run(
+            endpoint="/api/storages/export/s3", data={"project": project["id"]}
+        )
+
+        if response.ok:
+            storages.extend(
+                [dict(item, direction="export") for item in response.json()]
+            )  # add {'direction': 'export'} for each storage json.
+
+    return storages
+
+
+@task()
+def sync_storages(
+    storages,
+    http_conn_id: str,
+):
+    from requests.auth import HTTPBasicAuth
+
+    http = HttpHook("POST", http_conn_id=http_conn_id, auth_type=HTTPBasicAuth)
+
+    for storage in storages:
+        endpoint = (
+            f"/api/storages/s3/{storage['id']}/sync"
+            if storage["direction"] == "import"
+            else f"/api/storages/export/s3/{storage['id']}/sync"
+        )
+        http.run(endpoint)
 
 
 dag = DAG(
@@ -27,29 +78,16 @@ dag = DAG(
     tags=["labelstudio", "mlops"],
 )
 
-getExportStorages = SimpleHttpOperator(
-    task_id="get_export_storages",
-    endpoint="/api/storages/export/s3",
+getProjects = SimpleHttpOperator(
+    task_id="get_projects",
+    endpoint="/api/projects",
     method="GET",
     http_conn_id="labelstudio_conn",
     do_xcom_push=True,
     dag=dag,
 )
 
-parsed_result = parse_storages(storages=getExportStorages.output)
+getStorages = get_storages(getProjects.output, "labelstudio_conn")
+syncStorages = sync_storages(getStorages, "labelstudio_conn")
 
-for num, stor in enumerate(parsed_result):
-    syncExportStorage = SimpleHttpOperator(
-        task_id=f"sync_export_storage_{num}",
-        endpoint=f"/api/storages/export/s3/{stor['id']}/sync",
-        method="POST",
-        data={
-            "project": stor["project"],
-            "bucket": stor["bucket"],
-            "aws_access_key_id": stor["aws_access_key_id"],
-            "aws_secret_access_key": stor["aws_secret_access_key"],
-        },
-        http_conn_id="labelstudio_conn",
-        dag=dag,
-    )
-    getExportStorages >> syncExportStorage
+getProjects >> getStorages >> syncStorages
