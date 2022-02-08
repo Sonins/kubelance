@@ -71,7 +71,7 @@ def sync_storages(
         http.run(endpoint)
 
 
-dag = DAG(
+syncStorageDag = DAG(
     dag_id="sync_storage",
     default_args=args,
     schedule_interval="0 0 * * *",
@@ -87,7 +87,7 @@ getProjects = SimpleHttpOperator(
     method="GET",
     http_conn_id="labelstudio_conn",
     do_xcom_push=True,
-    dag=dag,
+    dag=syncStorageDag,
 )
 
 getStorages = get_storages(getProjects.output, "labelstudio_conn")
