@@ -3,6 +3,7 @@ from datetime import datetime
 from airflow.decorators import task
 from airflow.providers.http.hooks.http import HttpHook
 from airflow.providers.http.operators.http import SimpleHttpOperator
+from pendulum.tz import timezone
 
 from airflow import DAG
 
@@ -74,7 +75,9 @@ dag = DAG(
     dag_id="sync_storage",
     default_args=args,
     schedule_interval="0 0 * * *",
-    start_date=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+    start_date=datetime.now().replace(
+        hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone("Asia/Seoul")
+    ),
     tags=["labelstudio", "mlops"],
 )
 
