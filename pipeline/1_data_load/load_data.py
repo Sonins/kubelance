@@ -1,3 +1,6 @@
+"""
+Retrieve dataset images from S3 to PersitentVolume that it uses. ([/data] path)
+"""
 import argparse
 import os
 
