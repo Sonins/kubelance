@@ -20,7 +20,7 @@ if __name__ == "__main__":
     S3_ACCESS_KEY_ID = os.environ["S3_ACCESS_KEY"]
     S3_SECRET_ACCESS_KEY = os.environ["S3_SECRET_KEY"]
 
-    session = Session()
+    session = Session()  # boto3 session
 
     client = session.client(
         "s3",
@@ -29,14 +29,20 @@ if __name__ == "__main__":
         aws_secret_access_key=S3_SECRET_ACCESS_KEY,
     )
 
+    print("Downloading Images..")
     os.makedirs("/data/images", exist_ok=True)
 
-    for object in client.list_objects(
+    S3_images_list = client.list_objects(
         Bucket=args.input_bucket_name, Prefix="mldataset"
-    )["Contents"]:
-        target = os.path.join("/data/images", object["Key"].split("/")[-1])
-        if os.path.exists(target):
-            print(f"{object['Key']} is already exists")
-        else:
-            print(f"Downloading {object['Key']}")
-            client.download_file(args.input_bucket_name, object["Key"], target)
+    )["Contents"]
+
+    images_to_download = [
+        obj["Key"]
+        for obj in S3_images_list
+        if not os.path.isfile(os.path.join("/data/images", obj["Key"].split("/")[-1]))
+    ]
+
+    for obj in images_to_download:
+        target = os.path.join("/data/images", obj.split("/")[-1])
+        print(f"Downloading {obj}")
+        client.download_file(args.input_bucket_name, obj, target)
