@@ -4,4 +4,4 @@ RUN mkdir -p /app
 COPY . /app
 WORKDIR /app
 RUN pip install -r requirements.txt
-ENTRYPOINT [ "python", "load_data.py" ]
+ENTRYPOINT [ "python", "load_data_from_labelstudio.py" ]
