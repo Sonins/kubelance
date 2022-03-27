@@ -43,9 +43,10 @@ def yolo_pipeline():
         )
         .set_display_name("Load labelstudio dataset")
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
-        .container.add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))
-        .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
     )
+
+    load_data_1.container.add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))\
+        .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
 
     load_conf_1 = (
         dsl.ContainerOp(
@@ -90,7 +91,7 @@ if __name__ == "__main__":
 
     pipeline_name = "YOLO"
     pipeline_package_path = "YOLO_pipeline.zip"
-    version = "0.141"
+    version = "0.15"
 
     kfp.compiler.Compiler().compile(yolo_pipeline, pipeline_package_path)
 
