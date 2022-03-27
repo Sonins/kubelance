@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Iterable, Tuple, Union
 
 IDEAL_RATIO = 0.8
+ITERATE_TIL_IDEAL = 10
 
 # (label_dir, image_dir, target_dir)
 DEV_DIRS = (r"./test/labels", r"./test/images", r"./test")
@@ -31,7 +32,11 @@ def _split_test_train(
             continue
         count += 1
         ratio += train / total
-    ratio /= count
+
+    if count != 0:
+        ratio /= count
+    else:
+        ratio = 0
 
     return train_labels, ratio
 
@@ -62,9 +67,19 @@ if __name__ == "__main__":
     num_classes = len(classes)
 
     class_count_over_files = {}
+    label_exists = []
+
+    with open(f"{TARGET_DIR}/train.txt", "r") as f:
+        label_exists.extend([Path(line.strip()).stem for line in f.readlines()])
+
+    with open(f"{TARGET_DIR}/test.txt", "r") as f:
+        label_exists.extend([Path(line.strip()).stem for line in f.readlines()])
 
     label_files = Path(LABEL_DIR).rglob("*.txt")
     for file in label_files:
+        if file.stem in label_exists:
+            continue
+
         count = [0] * num_classes
 
         with file.open() as f:
@@ -82,7 +97,7 @@ if __name__ == "__main__":
     result_train = []
     result_ratio = 0
 
-    for i in range(10):
+    for i in range(ITERATE_TIL_IDEAL):
         train, ratio = _split_test_train(
             label_list=label_list, class_count_over_files=class_count_over_files
         )
@@ -92,43 +107,31 @@ if __name__ == "__main__":
             result_ratio = ratio
             ratio_difference = abs(IDEAL_RATIO - ratio)
 
-    # Move train/test dataset to each fitting directories.
-    # And write train.txt and test.txt accordingly.
+    # Write train.txt and test.txt accordingly.
     train = result_train
     test = [x for x in label_list if x not in train]
-
-    Path(f"{TARGET_DIR}/train").mkdir(exist_ok=True)
-    Path(f"{TARGET_DIR}/test").mkdir(exist_ok=True)
 
     train_file_list = []
     test_file_list = []
 
     for tr in train:
-        for f in Path(LABEL_DIR).rglob(f"{tr}.*"):
-            ext = f.suffix
-            f.rename(f"{TARGET_DIR}/train/{tr}{ext}")
-
         for f in Path(IMAGE_DIR).rglob(f"{tr}.*"):
             ext = f.suffix
-            f.rename(f"{TARGET_DIR}/train/{tr}{ext}")
             train_file_list.append(f"{TARGET_DIR}/train/{tr}{ext}")
 
     for tst in test:
-        for f in Path(LABEL_DIR).rglob(f"{tst}.*"):
-            ext = f.suffix
-            f.rename(f"{TARGET_DIR}/test/{tst}{ext}")
-
         for f in Path(IMAGE_DIR).rglob(f"{tst}.*"):
             ext = f.suffix
-            f.rename(f"{TARGET_DIR}/test/{tst}{ext}")
-            test_file_list.append(f"{TARGET_DIR}/test/{tr}{ext}")
+            test_file_list.append(f"{TARGET_DIR}/test/{tst}{ext}")
 
-    with open(f"{TARGET_DIR}/train.txt", "a") as f:
+    with open(f"{TARGET_DIR}/train.txt", "a+") as f:
         f.writelines("\n".join(train_file_list))
 
-    with open(f"{TARGET_DIR}/test.txt", "a") as f:
+    with open(f"{TARGET_DIR}/test.txt", "a+") as f:
         f.writelines("\n".join(test_file_list))
 
+    print("New dataset: ")
     print(f"total dataset: {list(class_count_over_files.keys())}")
-    print(f"training dataset: {result_train}")
+    print(f"training dataset: {train}")
+    print(f"test dataset: {test}")
     print(f"train / total ratio: {result_ratio}")
