@@ -124,10 +124,10 @@ if __name__ == "__main__":
             ext = f.suffix
             test_file_list.append(f"{TARGET_DIR}/test/{tst}{ext}")
 
-    with open(f"{TARGET_DIR}/train.txt", "a+") as f:
+    with open(f"{TARGET_DIR}/train.txt", "a") as f:
         f.writelines("\n".join(train_file_list))
 
-    with open(f"{TARGET_DIR}/test.txt", "a+") as f:
+    with open(f"{TARGET_DIR}/test.txt", "a") as f:
         f.writelines("\n".join(test_file_list))
 
     print("New dataset: ")
