@@ -25,9 +25,7 @@ if __name__ == "__main__":
 
     argument_parser.add_argument("--S3_endpoint", type=str, help="Input data S3 path")
 
-    argument_parser.add_argument(
-        "--input_bucket_name", type=str, help="Input data S3 bucket name"
-    )
+    argument_parser.add_argument("--bucket", type=str, help="Input data S3 bucket name")
 
     argument_parser.add_argument(
         "--S3_prefix", type=str, help="Prefix of S3 object path"
@@ -57,7 +55,7 @@ if __name__ == "__main__":
     # Load images from S3 (Minio).
 
     s3_endpoint = args.S3_endpoint
-    bucket_name = args.input_bucket_name
+    bucket_name = args.bucket
     s3_prefix = args.S3_prefix
     S3_ACCESS_KEY = os.environ["S3_ACCESS_KEY"]
     S3_SECRET_KEY = os.environ["S3_SECRET_KEY"]
