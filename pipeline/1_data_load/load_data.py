@@ -67,7 +67,7 @@ if __name__ == "__main__":
         aws_secret_access_key=S3_SECRET_KEY,
     )
 
-    image_list = client.list_objects(Bucket=bucket_name, prefix=s3_prefix)["Contents"]
+    image_list = client.list_objects(Bucket=bucket_name, Prefix=s3_prefix)["Contents"]
 
     images_to_download = [
         obj["Key"]
