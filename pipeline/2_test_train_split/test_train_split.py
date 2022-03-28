@@ -69,6 +69,9 @@ if __name__ == "__main__":
     class_count_over_files = {}
     label_exists = []
 
+    Path(f"{TARGET_DIR}/train.txt").touch()
+    Path(f"{TARGET_DIR}/test.txt").touch()
+
     with open(f"{TARGET_DIR}/train.txt", "r") as f:
         label_exists.extend([Path(line.strip()).stem for line in f.readlines()])
 
