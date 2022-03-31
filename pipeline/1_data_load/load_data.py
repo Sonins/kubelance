@@ -67,7 +67,12 @@ if __name__ == "__main__":
         aws_secret_access_key=S3_SECRET_KEY,
     )
 
-    image_list = client.list_objects(Bucket=bucket_name, Prefix=s3_prefix)["Contents"]
+    if not s3_prefix.endswith("/"):
+        s3_prefix += "/"
+
+    image_list = client.list_objects(
+        Bucket=bucket_name, Prefix=s3_prefix, Delimiter="/"
+    )["Contents"]
 
     images_to_download = [
         obj["Key"]
@@ -75,10 +80,10 @@ if __name__ == "__main__":
         if not os.path.isfile(os.path.join("/data/images", obj["Key"].split("/")[-1]))
     ]
 
-    for obj in images_to_download:
-        image_name = obj["Key"].split("/")[-1]
+    for image_path in images_to_download:
+        image_name = image_path.split("/")[-1]
         target = os.path.join("/data/images", image_name)
-        print(f"Downloading {obj}")
-        client.download_file(bucket_name, obj, target)
+        print(f"Downloading {image_path} to {target}")
+        client.download_file(bucket_name, image_path, target)
 
     print("Download Done.")
