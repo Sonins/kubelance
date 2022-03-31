@@ -62,15 +62,26 @@ if __name__ == "__main__":
     else:
         LABEL_DIR, IMAGE_DIR, TARGET_DIR = PROD_DIRS
 
-    # Load label files and count number of each classes
     classes = args.classes.split()
     num_classes = len(classes)
 
-    class_count_over_files = {}
-    label_exists = []
+    # Write .data and .names file for yolo train
+    with open(f"{TARGET_DIR}/obj.data", "w") as f:
+        f.write(f"classes = {num_classes}\n")
+        f.write(f"train = {TARGET_DIR}/train.txt")
+        f.write(f"test = {TARGET_DIR}/test.txt")
+        f.write(f"names = {TARGET_DIR}/obj.names")
+        f.write(f"backup = {TARGET_DIR}/backup/")
 
+    with open(f"{TARGET_DIR}/obj.names", "w") as f:
+        f.writelines(cl.strip() for cl in classes)
+
+    # Load label files and count number of each classes
     Path(f"{TARGET_DIR}/train.txt").touch()
     Path(f"{TARGET_DIR}/test.txt").touch()
+
+    class_count_over_files = {}
+    label_exists = []
 
     with open(f"{TARGET_DIR}/train.txt", "r") as f:
         label_exists.extend([Path(line.strip()).stem for line in f.readlines()])
