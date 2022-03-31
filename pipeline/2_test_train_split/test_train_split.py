@@ -66,15 +66,16 @@ if __name__ == "__main__":
     num_classes = len(classes)
 
     # Write .data and .names file for yolo train
+    # TODO: It may need to be in seperate file. (2_write_obj_file)
     with open(f"{TARGET_DIR}/obj.data", "w") as f:
         f.write(f"classes = {num_classes}\n")
-        f.write(f"train = {TARGET_DIR}/train.txt")
-        f.write(f"test = {TARGET_DIR}/test.txt")
-        f.write(f"names = {TARGET_DIR}/obj.names")
+        f.write(f"train = {TARGET_DIR}/train.txt\n")
+        f.write(f"test = {TARGET_DIR}/test.txt\n")
+        f.write(f"names = {TARGET_DIR}/obj.names\n")
         f.write(f"backup = {TARGET_DIR}/backup/")
 
     with open(f"{TARGET_DIR}/obj.names", "w") as f:
-        f.writelines(cl.strip() for cl in classes)
+        f.writelines("\n".join([cl for cl in classes]))
 
     # Load label files and count number of each classes
     Path(f"{TARGET_DIR}/train.txt").touch()
@@ -103,6 +104,7 @@ if __name__ == "__main__":
             label = label.strip()
             count[int(label[0])] += 1
 
+        file.rename(f"{IMAGE_DIR}/{file.stem}{file.suffix}")
         class_count_over_files[file.stem] = count
 
     # Split test/train and save train which is ratio closest to ideal.
@@ -125,24 +127,27 @@ if __name__ == "__main__":
     train = result_train
     test = [x for x in label_list if x not in train]
 
-    train_file_list = []
-    test_file_list = []
+    extensions = ("png", "jpg", "jpeg")
+    path_list = [Path(IMAGE_DIR).rglob(f"*.{ext}") for ext in extensions]
 
-    for tr in train:
-        for f in Path(IMAGE_DIR).rglob(f"{tr}.*"):
-            ext = f.suffix
-            train_file_list.append(f"{TARGET_DIR}/train/{tr}{ext}")
+    files = []
+    for p in path_list:
+        files.extend(p)
 
-    for tst in test:
-        for f in Path(IMAGE_DIR).rglob(f"{tst}.*"):
-            ext = f.suffix
-            test_file_list.append(f"{TARGET_DIR}/test/{tst}{ext}")
+    train_file_list = [
+        f"{IMAGE_DIR}/{f.stem}{f.suffix}" for f in files if f.stem in train
+    ]
+    test_file_list = [
+        f"{IMAGE_DIR}/{f.stem}{f.suffix}" for f in files if f.stem in test
+    ]
 
-    with open(f"{TARGET_DIR}/train.txt", "a") as f:
+    with open(f"{TARGET_DIR}/train.txt", "a+") as f:
         f.writelines("\n".join(train_file_list))
+        f.write("\n")
 
     with open(f"{TARGET_DIR}/test.txt", "a") as f:
         f.writelines("\n".join(test_file_list))
+        f.write("\n")
 
     print("New dataset: ")
     print(f"total dataset: {list(class_count_over_files.keys())}")
