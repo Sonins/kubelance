@@ -45,7 +45,8 @@ def yolo_pipeline():
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
     )
 
-    load_data_1.container.add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))\
+    load_data_1.container\
+        .add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))\
         .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
 
     load_conf_1 = (
