@@ -61,12 +61,14 @@ def yolo_pipeline():
                 "--S3_prefix",
                 "/model/conf",
             ],
+            file_outputs={"conf_file_name": "/tmp/output"},
         )
         .set_display_name("Load model configuration")
-        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
-        .container.add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))
-        .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
+        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))        
     )
+
+    load_conf_1.container.add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))\
+        .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
 
     test_train_split_2 = (
         dsl.ContainerOp(
@@ -97,10 +99,35 @@ def yolo_pipeline():
 
     calc_anchors_3.container.add_env_variable(
         V1EnvVar(name="DATA_PATH", value="/data/obj.data")
-    ).add_env_variable(V1EnvVar(name="CLUSTER_NUM", value=9))\
-    .add_env_variable(V1EnvVar(name="WIDTH", value=416))\
-    .add_env_variable(V1EnvVar(name="HEIGHT", value=416))\
-    .add_env_variable(V1EnvVar(name="OUTPUT_PATH", value="/data/anchors.txt"))
+    ).add_env_variable(V1EnvVar(name="CLUSTER_NUM", value=9)).add_env_variable(
+        V1EnvVar(name="WIDTH", value=416)
+    ).add_env_variable(
+        V1EnvVar(name="HEIGHT", value=416)
+    ).add_env_variable(
+        V1EnvVar(name="OUTPUT_PATH", value="/data/anchors.txt")
+    )
+
+    conf_tune_4 = (
+        dsl.ContainerOp(
+            name="Modify and tune configuration accordingly.",
+            image="gmlrhks95/mlpipeline-4-conf-tune",
+            arguments=[
+                "--classes",
+                load_data_1.outputs["classes"],
+                "--batches",
+                "16",
+                "--subdivision",
+                "4",
+                "--img_size",
+                "416",
+                "--config_filename",
+                load_conf_1.outputs["conf_file_name"],
+            ],
+        )
+        .set_display_name("Tuning configuration")
+        .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
+        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
+    ).after(calc_anchors_3, load_conf_1)
 
 
 if __name__ == "__main__":

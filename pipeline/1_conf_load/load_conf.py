@@ -31,3 +31,8 @@ if __name__ == "__main__":
         target = os.path.join("/conf", obj["Key"].split("/")[-1])
         print(f"Downloading {obj['Key']}")
         client.download_file(args.bucket, obj["Key"], target)
+
+        # Returning configuration file name.
+        if obj["Key"].endswith(".cfg"):
+            with open("/tmp/output", "w") as f:
+                f.write(obj["Key"].split("/")[-1])
