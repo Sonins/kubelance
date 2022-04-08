@@ -11,7 +11,14 @@ with open("pipeline/config.json", "r") as f:
     s3_access_key = s3_config["access_key"]
     s3_secret_key = s3_config["secret_key"]
     s3_endpoint = f"http://{s3_config['endpoint']}:{s3_config['port']}"
-    input_bucket_name = s3_config["buckets"]["input"]["name"]
+
+    s3_input_bucket = s3_config["buckets"]["input"]
+    input_bucket_name = s3_input_bucket["name"]
+    dataset_prefix = s3_input_bucket["prefix"]["dataset"]
+
+    s3_conf_bucket = s3_config["buckets"]["conf"]
+    conf_bucket_name = s3_conf_bucket["name"]
+    conf_prefix = s3_conf_bucket["prefix"]
 
     labelstudio_config = f_json["labelstudio"]
     labelstudio_export_endpoint = (
@@ -37,7 +44,7 @@ def yolo_pipeline():
                 "--bucket",
                 input_bucket_name,
                 "--S3_prefix",
-                "mldataset",
+                dataset_prefix,
             ],
             file_outputs={"classes": "/data/classes.txt"},
         )
@@ -57,9 +64,9 @@ def yolo_pipeline():
                 "--S3_endpoint",
                 s3_endpoint,
                 "--bucket",
-                input_bucket_name,
+                conf_bucket_name,
                 "--S3_prefix",
-                "/model/conf",
+                conf_prefix,
             ],
             file_outputs={"conf_file_name": "/tmp/output"},
         )
