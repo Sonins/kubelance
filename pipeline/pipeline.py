@@ -99,6 +99,7 @@ def yolo_pipeline():
                 "-c",
                 "darknet detector calc_anchors $DATA_PATH -num_of_clusters $CLUSTER_NUM -width $WIDTH -height $HEIGHT -dont_show && mv anchors.txt /data",
             ],
+            file_outputs={"anchors": "/data/anchors.txt"}
         )
         .set_display_name("Calculate anchors")
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
@@ -129,6 +130,8 @@ def yolo_pipeline():
                 "416",
                 "--config_filename",
                 load_conf_1.outputs["conf_file_name"],
+                "--anchors",
+                calc_anchors_3.outputs["anchors"]
             ],
         )
         .set_display_name("Tuning configuration")

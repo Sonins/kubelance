@@ -121,6 +121,9 @@ if __name__ == "__main__":
         "--img_size", type=int, help="width or height of image (square)", default=416
     )
     argument_parser.add_argument(
+        "--anchors", type=str, help="Calculated anchors", default="2, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401"
+    )
+    argument_parser.add_argument(
         "--json_args",
         type=json.loads,
         help="Other argument in json format",
@@ -133,11 +136,10 @@ if __name__ == "__main__":
 
     args = argument_parser.parse_args()
     config_filepath = f"/conf/{args.config_filename}"
-    anchor_filepath = "/data/anchors.txt"
     num_classes = len(args.classes.split())
 
     config = read_config(filepath=config_filepath)
-    anchors = read_anchors(anchor_filepath)
+    anchors = args.anchors.strip()
 
     parameters = build_parameters(
         num_classes,
