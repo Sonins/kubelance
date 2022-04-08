@@ -141,13 +141,15 @@ if __name__ == "__main__":
         f"{IMAGE_DIR}/{f.stem}{f.suffix}" for f in files if f.stem in test
     ]
 
-    with open(f"{TARGET_DIR}/train.txt", "a+") as f:
-        f.writelines("\n".join(train_file_list))
-        f.write("\n")
+    if train_file_list:
+        with open(f"{TARGET_DIR}/train.txt", "a+") as f:
+            f.writelines("\n".join(train_file_list))
+            f.write("\n")
 
-    with open(f"{TARGET_DIR}/test.txt", "a") as f:
-        f.writelines("\n".join(test_file_list))
-        f.write("\n")
+    if test_file_list:
+        with open(f"{TARGET_DIR}/test.txt", "a") as f:
+            f.writelines("\n".join(test_file_list))
+            f.write("\n")
 
     print("New dataset: ")
     print(f"total dataset: {list(class_count_over_files.keys())}")
