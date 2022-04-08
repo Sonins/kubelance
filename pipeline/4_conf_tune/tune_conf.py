@@ -149,3 +149,7 @@ if __name__ == "__main__":
 
     modify_config(config, parameters)
     save_config(config, config_filepath)
+
+    # Print configuration tuning result.
+    with open(config_filepath, "r") as f:
+        print("".join(f.readlines()))
