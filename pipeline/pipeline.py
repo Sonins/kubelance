@@ -139,6 +139,21 @@ def yolo_pipeline():
         .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
     ).after(calc_anchors_3, load_conf_1)
 
+    train_5 = (
+        dsl.ContainerOp(
+            name="Train",
+            image="daisukekobayashi/darknet:cpu-noopt",
+            arguments=[
+                "sh",
+                "-c",
+                f"darknet detector train /data/obj.data /conf/{load_conf_1.outputs['conf_file_name']} /conf/yolov4-tiny.weights -map",
+            ],
+        )
+        .set_display_name("Train yolo")
+        .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
+        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
+    ).after(conf_tune_4)
+
 
 if __name__ == "__main__":
 
