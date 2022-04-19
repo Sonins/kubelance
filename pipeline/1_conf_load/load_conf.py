@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     print("Downloading configuration..")
     objs = client.list_objects(Bucket=args.bucket, Prefix=args.S3_prefix)["Contents"]
-
+    os.makedirs("/tmp/output", exist_ok=True)
     for obj in objs:
         target = os.path.join("/conf", obj["Key"].split("/")[-1])
         print(f"Downloading {obj['Key']}")
@@ -34,5 +34,10 @@ if __name__ == "__main__":
 
         # Returning configuration file name.
         if obj["Key"].endswith(".cfg"):
-            with open("/tmp/output", "w") as f:
+            with open("/tmp/output/cfg", "w") as f:
+                f.write(obj["Key"].split("/")[-1])
+
+        # Returning weight file name.
+        if obj["Key"].endswith(".weights"):
+            with open("/tmp/output/weight", "w") as f:
                 f.write(obj["Key"].split("/")[-1])

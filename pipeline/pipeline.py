@@ -146,7 +146,11 @@ def yolo_pipeline():
             arguments=[
                 "sh",
                 "-c",
-                f"darknet detector train /data/obj.data /conf/{load_conf_1.outputs['conf_file_name']} /conf/yolov4-tiny.weights -map",
+                (
+                "darknet detector train /data/obj.data "
+                f"/conf/{load_conf_1.outputs['conf_file_name']} "
+                f"/conf/{load_conf_1.outputs['weight_file_name']} -map"
+                ),
             ],
         )
         .set_display_name("Train yolo")
