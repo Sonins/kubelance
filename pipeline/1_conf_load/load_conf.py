@@ -1,11 +1,12 @@
 import argparse
 import os
+import shutil
 from pathlib import Path
 
 import git
 from git.repo import Repo
 
-PATH = r"/conf"
+PATH = r"/tmp/git"
 
 
 def return_filenames(cfg: str, weight: str):
@@ -30,6 +31,8 @@ if __name__ == "__main__":
 
     print("Downloading configuration..")
 
+    os.makedirs(PATH, exist_ok=True)
+
     try:
         repo = Repo(PATH)
         repo.remotes.origin.pull()
@@ -48,3 +51,6 @@ if __name__ == "__main__":
     weight = str(weight).split("/")[-1]
 
     return_filenames(conf, weight)
+
+    for file in os.listdir(PATH):
+        shutil.move(os.path.join(PATH, file), os.path.join(r"/conf", file))
