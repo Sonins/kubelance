@@ -30,7 +30,9 @@ if __name__ == "__main__":
     for obj in objs:
         target = os.path.join("/conf", obj["Key"].split("/")[-1])
         print(f"Downloading {obj['Key']}")
-        client.download_file(args.bucket, obj["Key"], target)
+
+        if not os.path.isfile(target):
+            client.download_file(args.bucket, obj["Key"], target)
 
         # Returning configuration file name.
         if obj["Key"].endswith(".cfg"):
