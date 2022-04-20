@@ -61,12 +61,8 @@ def yolo_pipeline():
             name="load configuration from minio",
             image="gmlrhks95/mlpipeline-1-load-conf",
             arguments=[
-                "--S3_endpoint",
-                s3_endpoint,
-                "--bucket",
-                conf_bucket_name,
-                "--S3_prefix",
-                conf_prefix,
+                "--repo_url",
+                conf_git_url,
             ],
             file_outputs={
                 "conf_file_name": "/tmp/output/cfg",

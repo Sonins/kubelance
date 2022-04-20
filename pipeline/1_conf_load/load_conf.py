@@ -1,51 +1,50 @@
 import argparse
 import os
+from pathlib import Path
 
-from boto3 import Session
+import git
+from git.repo import Repo
+
+PATH = r"/conf"
+
+
+def return_filenames(cfg: str, weight: str):
+    os.makedirs("/tmp/output", exist_ok=True)
+    with open("/tmp/output/cfg", "w") as f:
+        f.write(cfg)
+
+    with open("/tmp/output/output_weight", "w") as f:
+        f.write(f"{cfg.split('.')[0]}_best.weights")
+
+    # Returning weight file name.
+    with open("/tmp/output/weight", "w") as f:
+        f.write(weight)
+
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
 
-    argument_parser.add_argument("--S3_endpoint", type=str, help="S3 endpoint")
-    argument_parser.add_argument("--bucket", type=str, help="S3 bucket name")
-    argument_parser.add_argument("--S3_prefix", type=str, help="S3 prefix")
-
-    S3_access_key = os.environ["S3_ACCESS_KEY"]
-    S3_secret_key = os.environ["S3_SECRET_KEY"]
+    argument_parser.add_argument("--repo_url", type=str, help="git repo url")
 
     args = argument_parser.parse_args()
 
-    session = Session()
-
-    client = session.client(
-        "s3",
-        endpoint_url=args.S3_endpoint,
-        aws_access_key_id=S3_access_key,
-        aws_secret_access_key=S3_secret_key,
-    )
-
     print("Downloading configuration..")
-    objs = client.list_objects(Bucket=args.bucket, Prefix=args.S3_prefix)["Contents"]
-    os.makedirs("/tmp/output", exist_ok=True)
-    for obj in objs:
-        target = os.path.join("/conf", obj["Key"].split("/")[-1])
-        print(f"Downloading {obj['Key']}")
 
-        if not os.path.isfile(target):
-            client.download_file(args.bucket, obj["Key"], target)
+    try:
+        repo = Repo(PATH)
+        repo.remotes.origin.pull()
+        repo.git.reset("--hard", "origin/master")
+    except git.exc.InvalidGitRepositoryError:
+        print(f"{PATH} is not git repo, try cloning..")
+        try:
+            repo = Repo.clone_from(args.repo_url, PATH)
+        except git.exc.InvalidGitRepositoryError:
+            print("Cloning failed.")
 
-        # Returning configuration file name.
-        
-        filename = obj["Key"].split("/")[-1]
+    conf = list(Path(PATH).glob("*.cfg"))[0]
+    weight = list(Path(PATH).glob("*.weights"))[0]
 
-        if obj["Key"].endswith(".cfg"):
-            with open("/tmp/output/cfg", "w") as f:
-                f.write(filename)
-            
-            with open("/tmp/output/output_weight", "w") as f:
-                f.write(f"{filename.split('.')[0]}_best.weights")
+    conf = str(conf).split("/")[-1]
+    weight = str(weight).split("/")[-1]
 
-        # Returning weight file name.
-        if obj["Key"].endswith(".weights"):
-            with open("/tmp/output/weight", "w") as f:
-                f.write(filename)
+    return_filenames(conf, weight)
