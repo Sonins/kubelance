@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: labelstudio-ingress
+  namespace: labelstudio
+  labels:
+    name: labelstudio-ingress
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+spec:
+  rules:
+  - host: labelstudio.k8s.sonins.co.kr
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: labelstudio-svc
+            port: 
+              number: 8080
