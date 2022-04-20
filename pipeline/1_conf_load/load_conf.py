@@ -35,11 +35,17 @@ if __name__ == "__main__":
             client.download_file(args.bucket, obj["Key"], target)
 
         # Returning configuration file name.
+        
+        filename = obj["Key"].split("/")[-1]
+
         if obj["Key"].endswith(".cfg"):
             with open("/tmp/output/cfg", "w") as f:
-                f.write(obj["Key"].split("/")[-1])
+                f.write(filename)
+            
+            with open("/tmp/output/output_weight", "w") as f:
+                f.write(f"{filename.split('.')[0]}_best.weights")
 
         # Returning weight file name.
         if obj["Key"].endswith(".weights"):
             with open("/tmp/output/weight", "w") as f:
-                f.write(obj["Key"].split("/")[-1])
+                f.write(filename)

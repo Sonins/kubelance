@@ -68,14 +68,23 @@ def yolo_pipeline():
                 "--S3_prefix",
                 conf_prefix,
             ],
-            file_outputs={"conf_file_name": "/tmp/output"},
+            file_outputs={
+                "conf_file_name": "/tmp/output/cfg",
+                "weight_file_name": "/tmp/output/weight",
+                "output_weight_file_name": "/tmp/output/output_weight"
+            },
         )
         .set_display_name("Load model configuration")
         .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))        
     )
 
-    load_conf_1.container.add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))\
-        .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
+    load_conf_1.container.add_env_variable(
+        V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key)
+    ).add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
+
+    model = load_conf_1.outputs['conf_file_name']
+    weight = load_conf_1.outputs['weight_file_name']
+    output_weight = load_conf_1.outputs['output_weight_file_name']
 
     test_train_split_2 = (
         dsl.ContainerOp(
@@ -129,7 +138,7 @@ def yolo_pipeline():
                 "--img_size",
                 "416",
                 "--config_filename",
-                load_conf_1.outputs["conf_file_name"],
+                model,
                 "--anchors",
                 calc_anchors_3.outputs["anchors"]
             ],
@@ -148,9 +157,10 @@ def yolo_pipeline():
                 "-c",
                 (
                 "darknet detector train /data/obj.data "
-                f"/conf/{load_conf_1.outputs['conf_file_name']} "
-                f"/conf/{load_conf_1.outputs['weight_file_name']} -map"
+                f"/conf/{model} "
+                f"/conf/{weight} -map -dont_show "
                 ),
+                f"&& cp /data/output/{output_weight} /conf/{weight}",
             ],
         )
         .set_display_name("Train yolo")
