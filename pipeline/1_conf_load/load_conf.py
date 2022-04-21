@@ -52,5 +52,12 @@ if __name__ == "__main__":
 
     return_filenames(conf, weight)
 
+    for file in os.listdir(r"/conf"):
+        path = os.path.join(r"/conf", file)
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            os.remove(path)
+
     for file in os.listdir(PATH):
         shutil.move(os.path.join(PATH, file), os.path.join(r"/conf", file))
