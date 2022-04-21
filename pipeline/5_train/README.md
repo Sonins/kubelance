@@ -1,3 +1,8 @@
+# Train
+
+Refer [pipeline.py](../pipeline.py).  
+5_train node is made using darknet image.
+
 ```python
     train_5 = (
         dsl.ContainerOp(
