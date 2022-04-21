@@ -72,12 +72,13 @@ if __name__ == "__main__":
         f.write(f"train = {TARGET_DIR}/train.txt\n")
         f.write(f"test = {TARGET_DIR}/test.txt\n")
         f.write(f"names = {TARGET_DIR}/obj.names\n")
-        f.write(f"backup = {TARGET_DIR}/backup/")
+        f.write(f"backup = {TARGET_DIR}/output")
 
     with open(f"{TARGET_DIR}/obj.names", "w") as f:
         f.writelines("\n".join([cl for cl in classes]))
 
     # Load label files and count number of each classes
+    Path(f"{TARGET_DIR}/output").mkdir(exist_ok=True)
     Path(f"{TARGET_DIR}/train.txt").touch()
     Path(f"{TARGET_DIR}/test.txt").touch()
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
 
         for label in labels:
             label = label.strip()
-            count[int(label[0])] += 1
+            count[int(label.split(" ")[0])] += 1
 
         file.rename(f"{IMAGE_DIR}/{file.stem}{file.suffix}")
         class_count_over_files[file.stem] = count
