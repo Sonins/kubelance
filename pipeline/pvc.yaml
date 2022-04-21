@@ -7,7 +7,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: standard
+  storageClassName: standard-rwo
   accessModes:
     - ReadWriteOnce
 ---
@@ -20,6 +20,6 @@ spec:
   resources:
     requests:
       storage: 2Gi
-  storageClassName: standard
+  storageClassName: standard-rwo
   accessModes:
     - ReadWriteOnce
