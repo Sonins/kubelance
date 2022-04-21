@@ -1,11 +1,12 @@
 {
-    "name": "yolo-pipeline",
-    "kubernetes": {
-        "endpoint": "",
-        "port": 8888
+    "name": "",
+    "git": {
+        "conf-url": "REPO_URL",
+        "username": "USERNAME",
+        "password": "PASSWORD"
     },
     "S3": {
-        "endpoint": "",
+        "endpoint": "minio-service.kubeflow",
         "port": 9000,
         "buckets": {
             "input": {
@@ -14,10 +15,6 @@
                     "dataset": "",
                     "label": ""
                 }
-            },
-            "conf": {
-                "name": "",
-                "prefix": ""
             }
         },
         "access_key": "",
@@ -25,10 +22,10 @@
     },
     "Kubeflow": {
         "endpoint": "",
-        "port": 3000
+        "port": 80
     },
     "labelstudio": {
-        "base_url": "",
+        "base_url": "labelstudio-svc.labelstudio",
         "port": 8080,
         "project_id": 1,
         "token": ""
