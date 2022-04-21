@@ -16,15 +16,15 @@ with open("pipeline/config.json", "r") as f:
     input_bucket_name = s3_input_bucket["name"]
     dataset_prefix = s3_input_bucket["prefix"]["dataset"]
 
-    s3_conf_bucket = s3_config["buckets"]["conf"]
-    conf_bucket_name = s3_conf_bucket["name"]
-    conf_prefix = s3_conf_bucket["prefix"]
-
     labelstudio_config = f_json["labelstudio"]
     labelstudio_export_endpoint = (
         f"http://{labelstudio_config['base_url']}:{labelstudio_config['port']}"
         f"/api/projects/{labelstudio_config['project_id']}/export"
     )
+
+    conf_git_url = f_json["git"]["conf-url"]
+    git_user = f_json["git"]["username"]
+    git_pw = f_json["git"]["password"]
 
 
 @dsl.pipeline(name="YOLO Test arcface", description="test pipeline")
@@ -34,6 +34,7 @@ def yolo_pipeline():
         dsl.ContainerOp(
             name="load dataset from labelstudio",
             image="gmlrhks95/mlpipeline-1-load-data",
+            command=["python", "load_data.py"],
             arguments=[
                 "--labelstudio_endpoint",
                 labelstudio_export_endpoint,
@@ -52,40 +53,42 @@ def yolo_pipeline():
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
     )
 
-    load_data_1.container\
-        .add_env_variable(V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key))\
-        .add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
+    load_data_1.container.add_env_variable(
+        V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key)
+    ).add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
 
     load_conf_1 = (
         dsl.ContainerOp(
             name="load configuration from minio",
             image="gmlrhks95/mlpipeline-1-load-conf",
+            command=["python", "load_conf.py"],
             arguments=[
                 "--repo_url",
-                conf_git_url,
+                f"https://{git_user}:{git_pw}@{conf_git_url}",
             ],
             file_outputs={
                 "conf_file_name": "/tmp/output/cfg",
                 "weight_file_name": "/tmp/output/weight",
-                "output_weight_file_name": "/tmp/output/output_weight"
+                "output_weight_file_name": "/tmp/output/output_weight",
             },
         )
         .set_display_name("Load model configuration")
-        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))        
+        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
     )
 
     load_conf_1.container.add_env_variable(
         V1EnvVar(name="S3_ACCESS_KEY", value=s3_access_key)
     ).add_env_variable(V1EnvVar(name="S3_SECRET_KEY", value=s3_secret_key))
 
-    model = load_conf_1.outputs['conf_file_name']
-    weight = load_conf_1.outputs['weight_file_name']
-    output_weight = load_conf_1.outputs['output_weight_file_name']
+    model = load_conf_1.outputs["conf_file_name"]
+    weight = load_conf_1.outputs["weight_file_name"]
+    output_weight = load_conf_1.outputs["output_weight_file_name"]
 
     test_train_split_2 = (
         dsl.ContainerOp(
             name="Split dataset into test/train",
             image="gmlrhks95/mlpipeline-2-test-train-split",
+            command=["python", "test_train_split.py"],
             arguments=[
                 "--classes",
                 load_data_1.outputs["classes"],
@@ -99,12 +102,12 @@ def yolo_pipeline():
         dsl.ContainerOp(
             name="Calculate anchors from data.",
             image="daisukekobayashi/darknet:cpu-noopt",
-            arguments=[
+            command=[
                 "sh",
                 "-c",
                 "darknet detector calc_anchors $DATA_PATH -num_of_clusters $CLUSTER_NUM -width $WIDTH -height $HEIGHT -dont_show && mv anchors.txt /data",
             ],
-            file_outputs={"anchors": "/data/anchors.txt"}
+            file_outputs={"anchors": "/data/anchors.txt"},
         )
         .set_display_name("Calculate anchors")
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
@@ -124,6 +127,7 @@ def yolo_pipeline():
         dsl.ContainerOp(
             name="Modify and tune configuration accordingly.",
             image="gmlrhks95/mlpipeline-4-conf-tune",
+            command=["python", "tune_conf.py"],
             arguments=[
                 "--classes",
                 load_data_1.outputs["classes"],
@@ -136,7 +140,7 @@ def yolo_pipeline():
                 "--config_filename",
                 model,
                 "--anchors",
-                calc_anchors_3.outputs["anchors"]
+                calc_anchors_3.outputs["anchors"],
             ],
         )
         .set_display_name("Tuning configuration")
@@ -147,21 +151,22 @@ def yolo_pipeline():
     train_5 = (
         dsl.ContainerOp(
             name="Train",
-            image="daisukekobayashi/darknet:cpu-noopt",
-            arguments=[
+            image="daisukekobayashi/darknet:gpu-cv-cc75",
+            command=[
                 "sh",
                 "-c",
                 (
-                "darknet detector train /data/obj.data "
-                f"/conf/{model} "
-                f"/conf/{weight} -map -dont_show "
+                    "darknet detector train /data/obj.data "
+                    f"/conf/{model} "
+                    f"/conf/{weight} -map -dont_show "
                 ),
-                f"&& cp /data/output/{output_weight} /conf/{weight}",
+                f"&& cp --verbose /data/output/{output_weight} /conf/{weight}",
             ],
         )
         .set_display_name("Train yolo")
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
         .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
+        .set_gpu_limit(1)
     ).after(conf_tune_4)
 
     validation_6 = (
@@ -172,11 +177,11 @@ def yolo_pipeline():
                 "sh",
                 "-c",
                 (
-                "darknet detector test /data/obj.data"
-                f" /conf/{model}"
-                f" /conf/{weight}"
+                    "darknet detector test /data/obj.data"
+                    f" /conf/{model}"
+                    f" /conf/{weight}"
                 ),
-            ]
+            ],
         )
         .set_display_name("Validate")
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
@@ -187,18 +192,19 @@ def yolo_pipeline():
         dsl.ContainerOp(
             name="Deploy new weight",
             image="gmlrhks95/mlpipeline-7-git-push",
-            command=['python', 'git_push.py'],
+            command=["python", "git_push.py"],
             arguments=[
                 "--src_weight",
                 f"/data/output/{output_weight}",
                 "--dest_weight",
-                f"/conf/{weight}"
+                f"/conf/{weight}",
             ],
         )
         .set_display_name("Deploy to git")
         .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
         .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
     ).after(train_5)
+
 
 if __name__ == "__main__":
 
@@ -210,7 +216,7 @@ if __name__ == "__main__":
 
     pipeline_name = "YOLO"
     pipeline_package_path = "YOLO_pipeline.zip"
-    version = "0.15"
+    version = "1.0.0"
 
     kfp.compiler.Compiler().compile(yolo_pipeline, pipeline_package_path)
 
