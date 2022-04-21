@@ -164,6 +164,41 @@ def yolo_pipeline():
         .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
     ).after(conf_tune_4)
 
+    validation_6 = (
+        dsl.ContainerOp(
+            name="Validation",
+            image="daisukekobayashi/darknet:cpu",
+            command=[
+                "sh",
+                "-c",
+                (
+                "darknet detector test /data/obj.data"
+                f" /conf/{model}"
+                f" /conf/{weight}"
+                ),
+            ]
+        )
+        .set_display_name("Validate")
+        .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
+        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
+    ).after(train_5)
+
+    deploy_6 = (
+        dsl.ContainerOp(
+            name="Deploy new weight",
+            image="gmlrhks95/mlpipeline-7-git-push",
+            command=['python', 'git_push.py'],
+            arguments=[
+                "--src_weight",
+                f"/data/output/{output_weight}",
+                "--dest_weight",
+                f"/conf/{weight}"
+            ],
+        )
+        .set_display_name("Deploy to git")
+        .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
+        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
+    ).after(train_5)
 
 if __name__ == "__main__":
 
