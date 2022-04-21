@@ -169,25 +169,6 @@ def yolo_pipeline():
         .set_gpu_limit(1)
     ).after(conf_tune_4)
 
-    validation_6 = (
-        dsl.ContainerOp(
-            name="Validation",
-            image="daisukekobayashi/darknet:cpu",
-            command=[
-                "sh",
-                "-c",
-                (
-                    "darknet detector test /data/obj.data"
-                    f" /conf/{model}"
-                    f" /conf/{weight}"
-                ),
-            ],
-        )
-        .set_display_name("Validate")
-        .apply(onprem.mount_pvc("yolo-data-pvc", "yolo-data", "/data"))
-        .apply(onprem.mount_pvc("yolo-conf-pvc", "yolo-conf", "/conf"))
-    ).after(train_5)
-
     deploy_6 = (
         dsl.ContainerOp(
             name="Deploy new weight",
